@@ -56,14 +56,14 @@ jobs:
               repo: context.repo.repo,
               title: "🚨 Regulatory Radar Alert: New Statutory Provisions Detected",
               body: `### Sovereign Statutory Radar Update
-The autonomous radar discovered new regulatory provisions or amendments in tracked feeds and dispatched a notification to Discord.
+            The autonomous radar discovered new regulatory provisions or amendments in tracked feeds and dispatched a notification to Discord.
 
-**Next Actions:**
-1. Review \`memory/pending_proposals.yaml\`.
-2. Review \`configs/regulatory_registry.yml\`.
-3. Run Curator to distill rules and index vectors into Qdrant:
-   \`\`\`bash
-   python -m src.agents.curator
-   \`\`\``,
+            **Next Actions:**
+            1. Review \`memory/pending_proposals.yaml\`.
+            2. Review \`configs/regulatory_registry.yml\`.
+            3. Run Curator to distill rules and index vectors into Qdrant:
+               \`\`\`bash
+               python -m src.agents.curator
+               \`\`\``,
               labels: ["compliance", "regulatory-radar"]
             });
