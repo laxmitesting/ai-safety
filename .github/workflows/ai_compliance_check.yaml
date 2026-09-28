@@ -58,14 +58,14 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const commentBody = `### 🚨 AI-Safety Statutory Audit Blocked
-This pull request failed automated compliance checks under:
-- **UK DUAA 2025 s. 80** (Automated Decision-Making Safeguards & Art. 22C)
-- **EU AI Act Reg 2024/1689** (Transparency & High-Risk Requirements)
+            This pull request failed automated compliance checks under:
+            - **UK DUAA 2025 s. 80** (Automated Decision-Making Safeguards & Art. 22C)
+            - **EU AI Act Reg 2024/1689** (Transparency & High-Risk Requirements)
 
-**Required Next Steps:**
-1. Check the CI run log above to view the exact code snippet and suggested fix.
-2. If this is solely automated decision logic, implement human review escalation hooks.
-3. If an explicit waiver applies, rerun with an authorized exemption rationale.`;
+            **Required Next Steps:**
+            1. Check the CI run log above to view the exact code snippet and suggested fix.
+            2. If this is solely automated decision logic, implement human review escalation hooks.
+            3. If an explicit waiver applies, rerun with an authorized exemption rationale.`;
 
             await github.rest.issues.createComment({
               issue_number: context.issue.number,
