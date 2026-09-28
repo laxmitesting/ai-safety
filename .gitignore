@@ -1,18 +1,18 @@
-.env
-# Environment & Secrets
-.env
-*.env
-
-# Virtual Environment
+# Virtual environments
 venv/
 .venv/
 env/
 
-# Python Cache & Caches
+# Secrets & Environment variables
+.env
+*.env
+
+# Python caches
 __pycache__/
 *.py[cod]
+*$py.class
 .pytest_cache/
 
-# Vector storage & temp artifacts
-storage/
-memory/pending_proposals.yaml
+# Qdrant SQLite lock files & temporary cache
+*.lock
+.lock

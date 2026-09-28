@@ -1,0 +1,313 @@
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "AISafetyCompliance Auditor",
+          "semanticVersion": "1.0.0",
+          "informationUri": "https://github.com/laxmitesting/ai-safety",
+          "rules": [
+            {
+              "id": "eu_ai_act_art50_transparency",
+              "name": "EuAiActArt50Transparency",
+              "shortDescription": {
+                "text": "EU AI Act Reg 2024/1689 Art. 50(1)"
+              },
+              "fullDescription": {
+                "text": "System prompt explicitly instructs AI to conceal its identity or pretend to be human."
+              },
+              "help": {
+                "text": "Suggested remediation: Ensure the system persona discloses synthetic nature to natural persons.",
+                "markdown": "### Statutory Requirement: EU AI Act Reg 2024/1689 Art. 50(1)\n\n**Issue:** System prompt explicitly instructs AI to conceal its identity or pretend to be human.\n\n**Remediation:** Ensure the system persona discloses synthetic nature to natural persons."
+              },
+              "properties": {
+                "precision": "very-high",
+                "tags": [
+                  "compliance",
+                  "ai-safety",
+                  "statutory-governance"
+                ]
+              }
+            },
+            {
+              "id": "uk_duaa_s80_art22c_adm",
+              "name": "UkDuaaS80Art22CAdm",
+              "shortDescription": {
+                "text": "UK DUAA 2025 c. 18 s. 80 (Article 22C UK GDPR)"
+              },
+              "fullDescription": {
+                "text": "Automated decision workflow explicitly disables human escalation for significant decisions."
+              },
+              "help": {
+                "text": "Suggested remediation: Set 'human_escalation_available': True and supply an escalation callback route.",
+                "markdown": "### Statutory Requirement: UK DUAA 2025 c. 18 s. 80 (Article 22C UK GDPR)\n\n**Issue:** Automated decision workflow explicitly disables human escalation for significant decisions.\n\n**Remediation:** Set 'human_escalation_available': True and supply an escalation callback route."
+              },
+              "properties": {
+                "precision": "very-high",
+                "tags": [
+                  "compliance",
+                  "ai-safety",
+                  "statutory-governance"
+                ]
+              }
+            },
+            {
+              "id": "uk_duaa_s80_art22a_solely_automated_adm",
+              "name": "UkDuaaS80Art22ASolelyAutomatedAdm",
+              "shortDescription": {
+                "text": "Data (Use and Access) Act 2025 c. 18 s. 80 (Article 22A)"
+              },
+              "fullDescription": {
+                "text": "The workflow finalizes applicant decisions with no mandatory meaningful human review step and explicitly marks the decision as solely automated."
+              },
+              "help": {
+                "text": "Suggested remediation: Add a mandatory human review step before finalizing any rejection or advancement decision, and do not mark the decision as solely automated unless no meaningful human involvement exists.",
+                "markdown": "### Statutory Requirement: Data (Use and Access) Act 2025 c. 18 s. 80 (Article 22A)\n\n**Issue:** The workflow finalizes applicant decisions with no mandatory meaningful human review step and explicitly marks the decision as solely automated.\n\n**Remediation:** Add a mandatory human review step before finalizing any rejection or advancement decision, and do not mark the decision as solely automated unless no meaningful human involvement exists."
+              },
+              "properties": {
+                "precision": "very-high",
+                "tags": [
+                  "compliance",
+                  "ai-safety",
+                  "statutory-governance"
+                ]
+              }
+            },
+            {
+              "id": "uk_duaa_s80_art22a_significant_decision_adm",
+              "name": "UkDuaaS80Art22ASignificantDecisionAdm",
+              "shortDescription": {
+                "text": "Data (Use and Access) Act 2025 c. 18 s. 80 (Article 22A)"
+              },
+              "fullDescription": {
+                "text": "The code makes hiring outcomes with likely legal or similarly significant effects, but it does not include an explicit decision-impact classification field that sets significant_decision based on impact."
+              },
+              "help": {
+                "text": "Suggested remediation: Add a decision-impact classification field to the workflow output and set significant_decision=true when the outcome has legal_effect or similarly_significant_effect.",
+                "markdown": "### Statutory Requirement: Data (Use and Access) Act 2025 c. 18 s. 80 (Article 22A)\n\n**Issue:** The code makes hiring outcomes with likely legal or similarly significant effects, but it does not include an explicit decision-impact classification field that sets significant_decision based on impact.\n\n**Remediation:** Add a decision-impact classification field to the workflow output and set significant_decision=true when the outcome has legal_effect or similarly_significant_effect."
+              },
+              "properties": {
+                "precision": "very-high",
+                "tags": [
+                  "compliance",
+                  "ai-safety",
+                  "statutory-governance"
+                ]
+              }
+            },
+            {
+              "id": "uk_duaa_s80_art22a_profiling_consideration_adm",
+              "name": "UkDuaaS80Art22AProfilingConsiderationAdm",
+              "shortDescription": {
+                "text": "Data (Use and Access) Act 2025 c. 18 s. 80 (Article 22A)"
+              },
+              "fullDescription": {
+                "text": "The workflow uses an algorithmic scoring function, but it does not record required profiling assessment fields needed to evaluate meaningful human involvement."
+              },
+              "help": {
+                "text": "Suggested remediation: Include required profiling assessment fields such as profiling_used and profiling_extent, and block completion if profiling extent is not recorded.",
+                "markdown": "### Statutory Requirement: Data (Use and Access) Act 2025 c. 18 s. 80 (Article 22A)\n\n**Issue:** The workflow uses an algorithmic scoring function, but it does not record required profiling assessment fields needed to evaluate meaningful human involvement.\n\n**Remediation:** Include required profiling assessment fields such as profiling_used and profiling_extent, and block completion if profiling extent is not recorded."
+              },
+              "properties": {
+                "precision": "very-high",
+                "tags": [
+                  "compliance",
+                  "ai-safety",
+                  "statutory-governance"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "eu_ai_act_art50_transparency",
+          "level": "error",
+          "message": {
+            "text": "[EU AI Act Reg 2024/1689 Art. 50(1)] System prompt explicitly instructs AI to conceal its identity or pretend to be human. Fix: Ensure the system persona discloses synthetic nature to natural persons."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/pr_violation_deceptive_prompt.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 18,
+                  "snippet": {
+                    "text": "Under no circumstances should you disclose that you are an AI"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "uk_duaa_s80_art22c_adm",
+          "level": "error",
+          "message": {
+            "text": "[UK DUAA 2025 c. 18 s. 80 (Article 22C UK GDPR)] Automated decision workflow explicitly disables human escalation for significant decisions. Fix: Set 'human_escalation_available': True and supply an escalation callback route."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/pr_violation_duaa_adm.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 30,
+                  "snippet": {
+                    "text": "'human_escalation_available': False"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "uk_duaa_s80_art22a_solely_automated_adm",
+          "level": "error",
+          "message": {
+            "text": "[Data (Use and Access) Act 2025 c. 18 s. 80 (Article 22A)] The workflow finalizes applicant decisions with no mandatory meaningful human review step and explicitly marks the decision as solely automated. Fix: Add a mandatory human review step before finalizing any rejection or advancement decision, and do not mark the decision as solely automated unless no meaningful human involvement exists."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/pr_violation_duaa_adm.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 25,
+                  "snippet": {
+                    "text": "return {\n            \"applicant_id\": applicant_id,\n            \"status\": \"REJECTED\",\n            \"decision_type\": \"SOLELY_AUTOMATED\",\n            \"reason\": \"Algorithmic screening threshold not met.\",\n            \"human_escalation_available\": False,\n        }"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "uk_duaa_s80_art22a_significant_decision_adm",
+          "level": "warning",
+          "message": {
+            "text": "[Data (Use and Access) Act 2025 c. 18 s. 80 (Article 22A)] The code makes hiring outcomes with likely legal or similarly significant effects, but it does not include an explicit decision-impact classification field that sets significant_decision based on impact. Fix: Add a decision-impact classification field to the workflow output and set significant_decision=true when the outcome has legal_effect or similarly_significant_effect."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/pr_violation_duaa_adm.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 19,
+                  "snippet": {
+                    "text": "def process_job_application(applicant_id: str, resume_data: Dict[str, Any]) -> Dict[str, Any]:"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "uk_duaa_s80_art22a_profiling_consideration_adm",
+          "level": "warning",
+          "message": {
+            "text": "[Data (Use and Access) Act 2025 c. 18 s. 80 (Article 22A)] The workflow uses an algorithmic scoring function, but it does not record required profiling assessment fields needed to evaluate meaningful human involvement. Fix: Include required profiling assessment fields such as profiling_used and profiling_extent, and block completion if profiling extent is not recorded."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/pr_violation_duaa_adm.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 12,
+                  "snippet": {
+                    "text": "score = (experience_years * 10) + (len(skills) * 5)"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "uk_duaa_s80_art22a_solely_automated_adm",
+          "level": "warning",
+          "message": {
+            "text": "[Data (Use and Access) Act 2025 c. 18 s. 80 (Article 22A)] The workflow finalizes an approval decision without a mandatory meaningful human review step for non-borderline cases, so the code does not expose a human-involvement control before all decisions are finalized. Fix: Require a human review or approval step before setting final approval status, or explicitly classify the decision as solely automated processing when no mandatory meaningful human review occurs."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/pr_compliant_pipeline.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 52,
+                  "snippet": {
+                    "text": "base_decision[\"status\"] = \"APPROVED\""
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "uk_duaa_s80_art22a_profiling_consideration_adm",
+          "level": "warning",
+          "message": {
+            "text": "[Data (Use and Access) Act 2025 c. 18 s. 80 (Article 22A)] The configuration used to determine meaningful human involvement does not record required profiling assessment fields such as profiling_used and profiling_extent. Fix: Add required profiling assessment fields to the decision payload and block completion until profiling_used and profiling_extent are recorded."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/pr_compliant_pipeline.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 46,
+                  "snippet": {
+                    "text": "if score < 60.0:\n        return route_for_human_review(base_decision)"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "ruleId": "uk_duaa_s80_art22a_significant_decision_adm",
+          "level": "warning",
+          "message": {
+            "text": "[Data (Use and Access) Act 2025 c. 18 s. 80 (Article 22A)] The decision payload does not include an explicit decision-impact classification field, so the system cannot set significant_decision based on legal_effect or similarly_significant_effect. Fix: Add a decision-impact classification field and set significant_decision true when the configured impact is legal_effect or similarly_significant_effect."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "examples/pr_compliant_pipeline.py",
+                  "uriBaseId": "%SRCROOT%"
+                },
+                "region": {
+                  "startLine": 31,
+                  "snippet": {
+                    "text": "base_decision = {\n        \"audit_trace_id\": audit_trace_id,\n        \"applicant_id\": applicant_id,\n        \"timestamp\": datetime.datetime.now(datetime.timezone.utc).isoformat(),\n        \"algorithmic_score\": score,\n        \"system_notice\": \"Notice: This score was generated with algorithmic assistance.\",\n        \"contestability_url\": f\"https://compliance.internal/representations?trace={audit_trace_id}\",\n        \"human_escalation_available\": True,\n    }"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

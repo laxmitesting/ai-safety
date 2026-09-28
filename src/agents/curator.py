@@ -23,6 +23,28 @@ logging.basicConfig(level=logging.INFO)
 
 COLLECTION_NAME = "statutory_rules"
 
+CURATOR_SYSTEM_PROMPT = (
+    "You are a regulatory compliance curator specialized in technical statutory distillation.\n\n"
+    "Your objective is to extract enforceable technical requirements from raw statutory prose "
+    "governing automated decision systems, synthetic media transparency, and AI safety controls.\n\n"
+    "### OPERATIONAL DIRECTIVES\n\n"
+    "1. VERBATIM PROVENANCE MANDATE:\n"
+    "   - Extract exact, continuous text fragments directly from the source prose for `verbatim_quote`.\n"
+    "   - Do not paraphrase, reword, or synthesize quotes; downstream verification checks will reject "
+    "unmatched tokens.\n\n"
+    "2. ENFORCEABLE TECHNICAL CONSTRAINTS:\n"
+    "   - Express `enforceable_constraint` as a concrete engineering requirement verifiable via static "
+    "code inspection, AST checks, or system prompt evaluations (e.g., mandatory disclosure flags, "
+    "human escalation callback handlers, prohibited persona claims).\n"
+    "   - Exclude aspirational policy statements, general preambles, and broad socio-economic goals.\n\n"
+    "3. DETERMINISTIC IDENTIFIERS:\n"
+    "   - Formulate clean, stable snake_case keys for `rule_id` indicating jurisdiction, statute, "
+    "article/section, and operational domain (e.g., 'uk_duaa_s80_art22c_adm', 'eu_ai_act_art50_transparency').\n\n"
+    "4. ACCURATE JURISDICTION & CITATION:\n"
+    "   - Record the precise statutory title, chapter/regulation number, and section/article in "
+    "`statute_reference` strictly matching the provided authority."
+)
+
 
 class DistilledRule(BaseModel):
     """Structured enforceable compliance rule with provenance metadata."""
@@ -77,7 +99,10 @@ def init_qdrant_collection() -> None:
         logger.info(f"Creating Qdrant collection '{COLLECTION_NAME}' (dim={EMBEDDING_DIM})...")
         client.create_collection(
             collection_name=COLLECTION_NAME,
-            vectors_config=models.VectorParams(size=EMBEDDING_DIM, distance=models.Distance.COSINE),
+            vectors_config=models.VectorParams(
+                size=EMBEDDING_DIM,
+                distance=models.Distance.COSINE
+            ),
         )
 
 
@@ -85,18 +110,18 @@ def distill_statutory_text(raw_text: str, jurisdiction: Literal["UK", "EU"]) -> 
     """Uses the Curator model to extract candidate rules from raw statutory prose."""
     client = OpenAI()
 
-    system_prompt = (
-        "You are an expert regulatory compliance curator specializing in AI governance law "
-        "(UK DUAA 2025 and EU AI Act). Read the following statutory text and extract enforceable "
-        "technical constraints on automated decision-making, synthetic persona transparency, or human oversight. "
-        "You MUST copy verbatim quotes directly from the provided text for `verbatim_quote`. Never invent statutory prose."
+    prompt = (
+        f"<target_jurisdiction>\n{jurisdiction}\n</target_jurisdiction>\n\n"
+        f"<statutory_source_text>\n{raw_text[:30000]}\n</statutory_source_text>\n\n"
+        "Distill all enforceable technical constraints into the specified schema. "
+        "Every verbatim_quote must be an exact substring from the source text above."
     )
 
     response = client.beta.chat.completions.parse(
         model=CURATOR_MODEL,
         messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": f"Jurisdiction: {jurisdiction}\n\nStatutory Text:\n{raw_text[:30000]}"},
+            {"role": "system", "content": CURATOR_SYSTEM_PROMPT},
+            {"role": "user", "content": prompt},
         ],
         response_format=DistilledRuleBatch,
     )

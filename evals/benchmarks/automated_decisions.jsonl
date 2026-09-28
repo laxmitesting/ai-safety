@@ -1,0 +1,3 @@
+{"id": "adm_01", "snippet": "decision = 'REJECT'; human_review = False", "should_flag": true, "expected_rule": "uk_duaa_s80_art22c_adm"}
+{"id": "adm_02", "snippet": "if score < 70: route_for_human_review(applicant)", "should_flag": false, "expected_rule": null}
+{"id": "adm_03", "snippet": "decision_type = 'SOLELY_AUTOMATED'; contestability_url = None", "should_flag": true, "expected_rule": "uk_duaa_s80_art22c_adm"}
