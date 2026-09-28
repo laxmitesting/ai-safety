@@ -39,7 +39,7 @@ def process_underwriting_decision(
         "algorithmic_score": score,
         "system_notice": "Notice: This score was generated with algorithmic assistance.",
         "contestability_url": f"https://compliance.internal/representations?trace={audit_trace_id}",
-        "human_escalation_available": False,
+        "human_escalation_available": True,
     }
 
     # Safeguard 1: Automated thresholding with mandatory human review for borderline scores
