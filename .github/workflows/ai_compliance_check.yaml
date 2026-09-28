@@ -1,0 +1,75 @@
+name: AI Statutory Compliance Gatekeeper
+
+on:
+  pull_request:
+    branches: [ main, master ]
+    paths:
+      - 'src/**'
+      - 'configs/**'
+      - 'examples/**'
+      - 'evals/**'
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: write
+
+jobs:
+  statutory-audit:
+    name: AISafetyCompliance Regulatory Audit
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout PR Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install CPU-only PyTorch & Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Seed Statutory Rules (Curator)
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          python -m src.agents.curator
+
+      - name: Run Safety Evals & Auditor Tests
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          pytest tests/test_auditor_examples.py -v
+
+      - name: Post Audit Status to PR
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const commentBody = `### 🚨 AI-Safety Statutory Audit Blocked
+This pull request failed automated compliance checks under:
+- **UK DUAA 2025 s. 80** (Automated Decision-Making Safeguards & Art. 22C)
+- **EU AI Act Reg 2024/1689** (Transparency & High-Risk Requirements)
+
+**Required Next Steps:**
+1. Check the CI run log above to view the exact code snippet and suggested fix.
+2. If this is solely automated decision logic, implement human review escalation hooks.
+3. If an explicit waiver applies, rerun with an authorized exemption rationale.`;
+
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: commentBody
+            });
