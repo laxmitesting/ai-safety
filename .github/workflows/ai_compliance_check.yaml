@@ -1,4 +1,4 @@
-name: AI Statutory Compliance Gatekeeper
+name: AI Statutory Compliance Gate
 
 on:
   pull_request:
@@ -11,45 +11,44 @@ on:
 
 permissions:
   contents: read
-  pull-requests: write
-  issues: write
+  security-events: write      # Required to upload SARIF to GitHub Code Scanning
+  pull-requests: write        # Required to comment on PRs
 
 jobs:
   statutory-audit:
-    name: AISafetyCompliance Regulatory Audit
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout PR Code
+      - name: Checkout Code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Set up Python
+      - name: Set up Python 3.12
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
-          cache: 'pip'
+          python-version: "3.12"
+          cache: "pip"
 
       - name: Install CPU-only PyTorch & Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install torch --index-url https://download.pytorch.org/whl/cpu
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install -r requirements.txt
 
-      - name: Seed Statutory Rules (Curator)
+      - name: Run Hybrid Compliance Auditor & Generate SARIF
+        id: run_audit
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        run: |
-          python -m src.agents.curator
-
-      - name: Run Safety Evals & Auditor Tests
-        env:
+          PYTHONPATH: .
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
-          pytest tests/test_auditor_examples.py -v
+          python -m src.agents.auditor examples/ --sarif-out report.sarif
+
+      - name: Upload SARIF Report to GitHub Code Scanning
+        uses: github/codeql-action/upload-sarif@v3
+        if: always() # Upload even if blocking violations caused the previous step to fail
+        with:
+          sarif_file: report.sarif
+          category: statutory-compliance
 
       - name: Post Audit Status to PR
         if: failure()
@@ -63,7 +62,7 @@ jobs:
             - **EU AI Act Reg 2024/1689** (Transparency & High-Risk Requirements)
 
             **Required Next Steps:**
-            1. Check the CI run log above to view the exact code snippet and suggested fix.
+            1. Check the **Security** or **Files Changed** tab to see line-by-line SARIF annotations.
             2. If this is solely automated decision logic, implement human review escalation hooks.
             3. If an explicit waiver applies, rerun with an authorized exemption rationale.`;
 
