@@ -1,8 +1,8 @@
-# AISafetyCompliance
+# AISafety
 
 An automated, regulatory-first AI safety and statutory governance framework for CI/CD pipelines.
 
-`AISafetyCompliance` bridges the gap between fast-moving enterprise LLM codebases and binding statutory obligations (such as the **EU AI Act Regulation 2024/1689** and the **UK Data (Use and Access) Act 2025 s. 80 / Article 22C**). 
+`AISafety` bridges the gap between fast-moving enterprise LLM codebases and binding statutory obligations (such as the **EU AI Act Regulation 2024/1689** and the **UK Data (Use and Access) Act 2025 s. 80 / Article 22C**). 
 
 The platform utilizes a multi-agent architecture combining deterministic Abstract Syntax Tree (AST) static analysis, embedded vector retrieval (Qdrant), and LLM-driven fast evaluation models to intercept compliance violations before code reaches production. Audit findings are exported in standard **OASIS SARIF v2.1.0** format, rendering inline annotations directly on GitHub Pull Request diffs.
 
