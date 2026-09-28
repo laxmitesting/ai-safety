@@ -1,0 +1,41 @@
+# Regulatory Registry: Canonical UK & EU statutory endpoints
+# Allows adding or updating statutory references without touching Python source code.
+
+sources:
+  # ---------------------------------------------------------------------------
+  # United Kingdom: Data (Use and Access) Act 2025
+  # ---------------------------------------------------------------------------
+  uk_duaa_adm_rules:
+    jurisdiction: "UK"
+    statute: "Data (Use and Access) Act 2025 c. 18 s. 80"
+    description: "Automated Decision-Making (Replaces UK GDPR Art 22 with Articles 22A-D)"
+    url: "https://www.legislation.gov.uk/ukpga/2025/18/section/80/data.xml"
+
+  uk_duaa_toc:
+    jurisdiction: "UK"
+    statute: "Data (Use and Access) Act 2025 Table of Contents"
+    description: "Full table of contents feed for DUAA provisions"
+    url: "https://www.legislation.gov.uk/ukpga/2025/18/contents/data.xml"
+
+  # ---------------------------------------------------------------------------
+  # European Union: EU AI Act (Regulation (EU) 2024/1689)
+  # ---------------------------------------------------------------------------
+  eu_ai_act_core:
+    jurisdiction: "EU"
+    statute: "EU AI Act Regulation (EU) 2024/1689 (Full Text)"
+    description: "Canonical CELLAR publication for entire AI Act framework"
+    url: "https://publications.europa.eu/resource/cellar/dc8116a1-3fe6-11ef-865a-01aa75ed71a1.0006.03/DOC_1"
+
+  eu_ai_act_transparency_art50:
+    jurisdiction: "EU"
+    statute: "EU AI Act Regulation (EU) 2024/1689 Art. 50"
+    description: "Mandatory disclosure and synthetic identity transparency obligations"
+    target_articles: ["Article 50"]
+    parent_source: "eu_ai_act_core"
+
+  eu_ai_act_high_risk_oversight:
+    jurisdiction: "EU"
+    statute: "EU AI Act Regulation (EU) 2024/1689 Art. 14 & Annex III"
+    description: "Human oversight mechanisms for high-risk employment and credit-scoring systems"
+    target_articles: ["Article 14", "Annex III"]
+    parent_source: "eu_ai_act_core"

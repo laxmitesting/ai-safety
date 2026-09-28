@@ -1,0 +1,18 @@
+.env
+# Environment & Secrets
+.env
+*.env
+
+# Virtual Environment
+venv/
+.venv/
+env/
+
+# Python Cache & Caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Vector storage & temp artifacts
+storage/
+memory/pending_proposals.yaml
