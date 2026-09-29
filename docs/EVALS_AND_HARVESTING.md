@@ -40,7 +40,7 @@ graph LR
     end
 
     subgraph CI Gatekeeper Evals
-        A1[Auditor Detection Eval] -->|Evaluate Against Golden Corpus| M2["Recall ≥ 95%<br/>Precision ≥ 90%"]
+        A1[Auditor Detection Eval] -->|Evaluate Against Benchmark Fixtures<br/>evals/benchmarks/*.jsonl| M2["Recall ≥ 95%<br/>Precision ≥ 90%"]
         M2 -->|Pass| V2[Approved CI Release]
     end
 ```
@@ -81,11 +81,10 @@ flowchart TD
 
     subgraph Human-in-the-Loop Triage
         APPEND --> REVIEW[Weekly Compliance Review]
-        REVIEW --> DISP{Classify Trace Domain}
+        REVIEW --> DISP{Classify Harvested Trace}
         DISP -->|ADM Violation| ADM[Promote to automated_decisions.jsonl]
         DISP -->|Prompt Deception| DEC[Promote to deceptive_prompts.jsonl]
-        DISP -->|False Positive| TUNE[Adjust AST / Vector Thresholds]
-        DISP -->|Valid Exemption| ARCHIVE[Store in Legal Waiver Archive]
+        DISP -->|False Positive / Noise| TUNE[Discard & Tune AST / Similarity Thresholds]
     end
 
     ADM --> REVAL[Run evals/eval_auditor_recall.py]

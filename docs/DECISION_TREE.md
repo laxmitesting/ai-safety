@@ -18,7 +18,8 @@ flowchart TD
     
     %% Clean Pass
     HybridEval -->|Zero Violations| PassExit[Exit Code 0: Check Passes Green]
-    PassExit --> MergeAllowed([PR Allowed to Merge])
+    PassExit --> ExportCleanSARIF[Export clean report.sarif]
+    ExportCleanSARIF --> MergeAllowed([PR Allowed to Merge])
     
     %% Violations Detected
     HybridEval -->|Violations Found| CheckSeverity{Any BLOCKING<br/>Violations?}
@@ -26,25 +27,16 @@ flowchart TD
     CheckSeverity -->|WARNING Only| WarnLog[Log Warnings to CI Console]
     WarnLog --> PassExit
     
-    CheckSeverity -->|BLOCKING Present| CheckWaiver{Authorized Waiver<br/>or Override Reason?}
+    %% Blocking Failure Branch (No exemptions permitted)
+    CheckSeverity -->|BLOCKING Present| BlockMerge[Exit Code 1: Check Turns Red]
+    BlockMerge --> GenSarif[Generate OASIS SARIF v2.1.0: report.sarif]
+    GenSarif --> PostComment[GitHub Bot Posts Inline Remediation]
+    BlockMerge --> DispatchTG[Dispatch Telegram Alert: Blocking Violation]
+    BlockMerge --> HarvestFail[Harvest Trace to evals/benchmarks/pending_evals.jsonl]
     
-    %% Waiver / Override Branch
-    CheckWaiver -->|Valid Reason Provided| ContestedPass[Flag Trace as CONTESTED]
-    ContestedPass --> HarvestWaiver[Harvest Trace to pending_evals.jsonl]
-    HarvestWaiver --> OverrideExit[Exit Code 0: Merged with Documented Waiver]
-    OverrideExit --> MergeAllowed
-    
-    %% Blocking Failure Branch
-    CheckWaiver -->|No Valid Exemption| BlockMerge[Exit Code 1: Check Turns Red]
-    BlockMerge --> PostComment[GitHub Bot Posts Inline Remediation]
-    BlockMerge --> HarvestFail[Harvest Trace to pending_evals.jsonl]
-    HarvestFail --> EngAction{Engineer Remediation Choice}
-    
-    EngAction -->|Fix Logic / Prompts| PushFix[git push origin]
+    HarvestFail --> EngAction[Engineer Fixes Code Logic / Prompts]
+    EngAction --> PushFix[git push origin]
     PushFix --> Start
-    
-    EngAction -->|Request Legal Sign-off| RequestWaiver[Add --override-reason with Rationale]
-    RequestWaiver --> PushFix
 ```
 
 ---

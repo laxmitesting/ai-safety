@@ -11,20 +11,27 @@ The platform decouples legal ingestion and distillation from code-level policy e
 ```mermaid
 flowchart TD
     %% ==========================================
-    %% PHASE 1: DISCOVERY & STATUTORY INGESTION
+    %% PHASE 1: DISCOVERY, INGESTION & HITL GATE
     %% ==========================================
-    subgraph Phase1["1. Initial Discovery & Statutory Ingestion (Pre-CI / Offline Registry)"]
+    subgraph Phase1["1. Statutory Ingestion, Grounding & HITL Promotion (Offline / Radar)"]
         direction TB
-        L1["legislation.gov.uk API<br/>(UK DUAA 2025 s. 80 / Art 22C)"] --> LT[Legislation Fetcher Tool]
+        L1["legislation.gov.uk API<br/>(UK DUAA 2025 s. 80 / Art 22C)"] --> LT[src/tools/legislation.py]
         L2["EUR-Lex Official Journals<br/>(EU AI Act Reg 2024/1689)"] --> LT
         
-        LT -->|Raw XML / Text| CR[Curator Agent]
+        LT -->|Raw XML / Text Cache| CR[src/agents/curator.py]
         
         CR -->|Token Containment Check| G{Groundedness<br/>Ratio ≥ 0.85?}
         G -->|No: Hallucinated / Distorted| REJ[Reject Rule Ingestion]
-        G -->|Yes: Ground-Truth Verified| DR[Generate DistilledRule Schema]
+        G -->|Yes: Ground-Truth Verified| STG_PROP[Stage to memory/pending_proposals.yaml]
         
-        DR --> EMB[FastEmbed / Dense Embedder]
+        STG_PROP --> DISC_ALERT[Dispatch Discord Radar Notification]
+        DISC_ALERT --> HITL{{"Human-in-the-Loop Sign-off<br/>(workflow_dispatch / promote_rule.py)"}}
+        
+        HITL -->|Rejected| REJ_PROP[Discard / Archive Proposal]
+        HITL -->|Approved| PROMOTE[src/tools/promote_rule.py]
+        
+        PROMOTE --> EMB[Embedder / Vectorizer]
+        PROMOTE --> REG_CFG[Update configs/regulatory_registry.yaml]
         EMB -->|Upsert Vectors & Payloads| QD[(Qdrant Vector Store<br/>statutory_rules Collection)]
     end
 
@@ -35,22 +42,31 @@ flowchart TD
         direction TB
         PR[Developer Submits Pull Request] --> AUD[src/audit_system.py]
         
-        AUD --> AG[Auditor Agent]
+        AUD --> AG[src/agents/auditor.py]
         
-        %% RAG Retrieval Link from Qdrant
-        QD -.->|Semantic Query: Top-K Directives & Citations| AG
+        subgraph Engines["Hybrid Audit Inspection Core"]
+            AST_ENG[Deterministic AST Visitor]
+            REG_ENG[Deceptive Prompt Regex]
+            RAG_ENG[Qdrant Semantic RAG + LLM]
+        end
         
-        AG --> CHK{Statutory Audit Check}
+        AG --> Engines
+        QD -.->|Semantic Query: Top-K Constraints| RAG_ENG
+        
+        Engines --> CHK{Statutory Audit Check}
         
         CHK -->|Blocking Violations Found| BLK[Exit Code 1: Block Merge]
         CHK -->|Compliant / Clean| PASS[Exit Code 0: Approve Merge]
         
-        BLK --> CMT[Post Remediation Comment to GitHub PR]
-        BLK --> HARV[Trace Harvester]
+        BLK --> SARIF[Generate OASIS SARIF v2.1.0: report.sarif]
+        SARIF --> CMT[Post Annotations to GitHub PR]
+        BLK --> TG_ALERT[Dispatch Telegram Blocking Alert]
+        
+        BLK --> HARV[src/tools/harvester.py]
         PASS -.->|If Contested or Exemption Active| HARV
         
-        HARV --> STG[(evals/benchmarks/pending_evals.jsonl)]
-        STG -->|Human-in-the-Loop Labeling| BENCH[Active Benchmark Evaluation Sets]
+        HARV --> PEND_EVAL[(evals/benchmarks/pending_evals.jsonl)]
+        PEND_EVAL -->|Human-in-the-Loop Curation| BENCH[Active Benchmark Evaluation Sets]
     end
 
     %% Explicit connection from Discovery phase to Runtime phase
@@ -113,23 +129,28 @@ sequenceDiagram
     participant Audit as src/agents/auditor.py
     participant Qdrant as Qdrant Vector Store
     participant Harv as src/tools/harvester.py
+    participant Notif as src/tools/notifications.py
     participant GH as GitHub PR API
 
-    Dev->>CLI: python src/audit_system.py examples/
+    Dev->>CLI: python src/audit_system.py examples/ --sarif-out report.sarif
     CLI->>Audit: audit_file(path)
-    Audit->>Audit: Extract AST tokens & system prompts
+    Audit->>Audit: Extract AST tokens & deceptive prompt patterns
     Audit->>Qdrant: Query nearest constraints (Embeddings)
     Qdrant-->>Audit: Top-K statutory payloads (Art. 50 / Art. 22C)
-    Audit->>Audit: Evaluate code against retrieved mandates
+    Audit->>Audit: Hybrid evaluation (AST + Regex + Fast LLM RAG)
     
     alt Statutory Violation Flagged
         Audit-->>CLI: AuditReport(status=FAILED, violations=[...])
+        CLI->>Notif: send_telegram_alert(title, summary, rule_id)
+        Notif-->>CLI: Telegram Dispatched
         CLI->>Harv: harvest_trace(file, report)
-        Harv-->>CLI: Appended to pending_evals.jsonl
-        CLI->>GH: Post PR comment with statutory reference & remediation
+        Harv-->>CLI: Appended to evals/benchmarks/pending_evals.jsonl
+        CLI->>CLI: Generate OASIS SARIF v2.1.0 (report.sarif)
+        CLI->>GH: Upload SARIF / Post PR remediation comments
         CLI-->>Dev: Exit Code 1 (Merge Blocked)
     else Compliant Pipeline
         Audit-->>CLI: AuditReport(status=PASSED, violations=[])
+        CLI->>CLI: Generate clean report.sarif
         CLI-->>Dev: Exit Code 0 (Merge Approved)
     end
 ```

@@ -9,7 +9,7 @@ import xml.etree.ElementTree as ET
 import httpx
 import yaml
 
-from configs.settings import CACHE_DIR, REGISTRY_PATH
+from configs.settings import CACHE_DIR, REGISTRY_PATH, PROJECT_ROOT
 from src.tools.notifications import send_discord_alert
 
 logger = logging.getLogger("feed_discovery")
@@ -19,6 +19,9 @@ HEADERS = {
     "User-Agent": "AISafetyComplianceRadar/2026.1",
     "Accept": "application/atom+xml, application/rss+xml, text/xml, application/xml",
 }
+
+PENDING_EVALS_PATH = Path(PROJECT_ROOT) / "evals" / "benchmarks" / "pending_evals.jsonl"
+EVAL_ALERT_THRESHOLD = 5  # Alert when 5 or more unreviewed traces accumulate
 
 
 def load_regulatory_registry() -> Dict[str, Any]:
@@ -93,6 +96,30 @@ async def check_statutory_source(source_key: str, source_cfg: Dict[str, Any]) ->
     return matched_updates
 
 
+async def check_pending_evals_triage() -> None:
+    """Checks pending_evals.jsonl and fires a Discord digest if traces need curation."""
+    if not PENDING_EVALS_PATH.exists():
+        return
+
+    lines = [
+        line.strip()
+        for line in PENDING_EVALS_PATH.read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    count = len(lines)
+
+    if count >= EVAL_ALERT_THRESHOLD:
+        logger.info(f"Eval triage threshold reached ({count} pending traces). Dispatching Discord digest.")
+        await send_discord_alert(
+            title="Active Learning Triage Digest",
+            message=(
+                f"📋 **{count} uncurated PR traces** have accumulated in `pending_evals.jsonl`.\n"
+                f"Review and promote edge cases into active benchmark suites."
+            ),
+            rule_id="eval_curation_digest",
+        )
+
+
 async def run_discovery_cycle() -> None:
     """Executes a full discovery cycle across all entries in regulatory_registry.yaml."""
     registry = load_regulatory_registry()
@@ -123,6 +150,9 @@ async def run_discovery_cycle() -> None:
             )
 
     logger.info(f"Discovery radar cycle completed. Detected {len(all_alerts)} relevant items.")
+
+    # Run the triage check at the end of the radar run
+    await check_pending_evals_triage()
 
 
 if __name__ == "__main__":

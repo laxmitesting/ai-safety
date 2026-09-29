@@ -25,40 +25,45 @@ The platform utilizes a multi-agent architecture combining deterministic Abstrac
 ## Architecture Overview
 
 ```text
-[Phase 1: Ingestion & Distillation]
-      +-----------------------------+
-      | Official Legal Sources      |
-      | (legislation.gov.uk/EUR-Lex)|
-      +-----------------------------+
+[Phase 1: Ingestion, Distillation & HITL Gate]
+      +-------------------------------+
+      | Official Legal Sources        |
+      | (legislation.gov.uk / EUR-Lex)|
+      +-------------------------------+
                      |
                      v
-      +-----------------------------+
-      |        Curator Agent        |
-      |  (LLM Distillation Model)   |
-      +-----------------------------+
+      +-------------------------------+
+      |         Curator Agent         |
+      |   (LLM Distillation Model)    |
+      +-------------------------------+
                      |
                      v
-      +-----------------------------+
-      | Groundedness Gate (>= 85%)  | ----(Fail)----> [ Discard Hallucination ]
-      +-----------------------------+
+      +-------------------------------+
+      |  Groundedness Gate (>= 85%)   | ----(Fail)----> [ Discard Hallucination ]
+      +-------------------------------+
                      | (Pass)
                      v
-      +-----------------------------+
-      | Embedded Qdrant Vector DB   |
-      | (statutory_rules Collection)|
-      +-----------------------------+
+      +-------------------------------+
+      | memory/pending_proposals.yaml |
+      +-------------------------------+
+                     |
+                     v [HITL Review: promote_rule.py]
+      +-------------------------------+
+      |   Embedded Qdrant Vector DB   |
+      | (statutory_rules Collection)  |
+      +-------------------------------+
                      |
   . . . . . . . . . .|. . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
-  . [Phase 2: CI/CD PR Governance]                                              .
+  . [Phase 2: CI/CD PR Governance & Active Learning]                            .
   .                                                                             .
-  .   +-----------------------------+                                           .
-  .   | PR Diffs / Untrusted Code   |                                           .
-  .   +-----------------------------+                                           .
+  .   +-------------------------------+                                         .
+  .   |   PR Diffs / Untrusted Code   |                                         .
+  .   +-------------------------------+                                         .
   .                  |                                                          .
   .                  v                                                          .
-  .   +-----------------------------+                                           .
-  .   |      audit_system.py        |                                           .
-  .   +-----------------------------+                                           .
+  .   +-------------------------------+                                         .
+  .   |        audit_system.py        |                                         .
+  .   +-------------------------------+                                         .
   .                  |                                                          .
   .                  v                                                          .
   .   +-----------------------------------------+                               .
@@ -71,15 +76,20 @@ The platform utilizes a multi-agent architecture combining deterministic Abstrac
        (Exit 0: Compliant)           (Exit 1: Violations Found)
                      |                            |
                      v                            v
-      +-----------------------------+  +-------------------------------------+
-      |   GitHub PR Passes Green    |  | GitHub PR Blocked + SARIF Diff /    |
-      |      (Approved to Merge)    |  | Telegram & Discord Alerts Dispatched|
-      +-----------------------------+  +-------------------------------------+
+      +-------------------------------+  +-------------------------------------+
+      |    GitHub PR Passes Green     |  | GitHub PR Blocked + SARIF Annotate  |
+      |      (Approved to Merge)      |  | Dispatch Telegram Alert             |
+      +-------------------------------+  +-------------------------------------+
                                                   |
                                                   v
                                        +-------------------------------------+
-                                       |          Trace Harvester            |
+                                       |           Trace Harvester           |
                                        |  (evals/benchmarks/pending_evals)   |
+                                       +-------------------------------------+
+                                                  |
+                                                  v [Weekly Curation]
+                                       +-------------------------------------+
+                                       | Active Benchmark Suites (Eval Sets) |
                                        +-------------------------------------+
 ```
 
@@ -103,9 +113,10 @@ Detailed architectural specifications, regulatory mappings, and benchmark method
 ├── requirements.txt                   # Pinned project runtime dependencies
 ├── .github/
 │   └── workflows/
-│       ├── ai_compliance_check.yaml   # PR compliance gate & SARIF upload
-│       ├── ci.yaml                    # Automated test suite
-│       └── radar_schedule.yaml        # Scheduled regulatory feed tracking
+│       ├── ai_compliance_check.yaml    # PR compliance gate & SARIF upload
+│       ├── ci.yaml                     # Automated test suite
+        ├── promote-statutory-rule.yaml # HITL workflow_dispatch trigger to promote vetted proposals to Qdrant registry
+│       └── scheduled_feed_radar.yaml   # Scheduled regulatory feed tracking
 ├── configs/
     ├── regulatory_registry.yaml       # Authoritative statutory feeds & rule mapping sources
 │   └── settings.py                    # Global models, paths, and thresholds
@@ -136,7 +147,7 @@ Detailed architectural specifications, regulatory mappings, and benchmark method
 │       ├── eu_ai_act_core.txt
 │       └── uk_duaa_adm_rules.txt
 ├── src/
-    ├── audit_system.py                    # CLI audit entrypoint
+    ├── audit_system.py                # CLI audit entrypoint
 │   ├── agents/
 │   │   ├── auditor.py                 # Hybrid code auditor & SARIF exporter
 │   │   └── curator.py                 # Statutory text ingestion & distillation

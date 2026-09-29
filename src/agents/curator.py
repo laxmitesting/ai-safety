@@ -1,27 +1,24 @@
-"""curator.py: Production curator agent with resilient token-level groundedness checks and Qdrant indexing."""
+"""curator.py: Production curator agent with token-level groundedness checks and HITL proposal staging."""
 
-import json
 import logging
 import re
 from pathlib import Path
 from typing import List, Literal, Optional
 from openai import OpenAI
 from pydantic import BaseModel, Field
-from qdrant_client import models
+import yaml
 
 from configs.settings import (
     CURATOR_MODEL,
-    EMBEDDING_DIM,
     GROUNDEDNESS_THRESHOLD,
     PROJECT_ROOT,
     CACHE_DIR,
 )
-from src.tools.qdrant_client import get_embedding, get_qdrant_client
 
 logger = logging.getLogger("curator")
 logging.basicConfig(level=logging.INFO)
 
-COLLECTION_NAME = "statutory_rules"
+PENDING_PROPOSALS_PATH = Path(PROJECT_ROOT) / "memory" / "pending_proposals.yaml"
 
 CURATOR_SYSTEM_PROMPT = (
     "You are a regulatory compliance curator specialized in technical statutory distillation.\n\n"
@@ -69,11 +66,7 @@ def _normalize_tokens(text: str) -> set[str]:
 
 
 def verify_groundedness(rule: DistilledRule, raw_source_text: str, match_threshold: float = GROUNDEDNESS_THRESHOLD) -> bool:
-    """Verifies that the words cited by the model actually exist in the source text.
-    
-    Tolerates whitespace and minor punctuation discrepancies while preventing hallucination
-    of fabricated terms or phantom requirements.
-    """
+    """Verifies that the words cited by the model actually exist in the source text."""
     if not rule.verbatim_quote or len(rule.verbatim_quote.strip()) < 15:
         return False
 
@@ -82,28 +75,45 @@ def verify_groundedness(rule: DistilledRule, raw_source_text: str, match_thresho
         return False
 
     source_tokens = _normalize_tokens(raw_source_text)
-    
-    # Calculate token recall against the source text
     contained_tokens = quote_tokens.intersection(source_tokens)
     overlap_ratio = len(contained_tokens) / len(quote_tokens)
 
     return overlap_ratio >= match_threshold
 
 
-def init_qdrant_collection() -> None:
-    """Ensures statutory_rules collection exists in Qdrant with matching embedding dimension."""
-    client = get_qdrant_client()
-    collections = [c.name for c in client.get_collections().collections]
-    
-    if COLLECTION_NAME not in collections:
-        logger.info(f"Creating Qdrant collection '{COLLECTION_NAME}' (dim={EMBEDDING_DIM})...")
-        client.create_collection(
-            collection_name=COLLECTION_NAME,
-            vectors_config=models.VectorParams(
-                size=EMBEDDING_DIM,
-                distance=models.Distance.COSINE
-            ),
-        )
+def stage_pending_proposals(new_rules: List[DistilledRule]) -> int:
+    """Appends verified distilled rules to memory/pending_proposals.yaml for human review."""
+    PENDING_PROPOSALS_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+    existing_data: List[dict] = []
+    if PENDING_PROPOSALS_PATH.exists():
+        raw_yaml = PENDING_PROPOSALS_PATH.read_text(encoding="utf-8").strip()
+        if raw_yaml:
+            try:
+                parsed = yaml.safe_load(raw_yaml)
+                if isinstance(parsed, list):
+                    existing_data = parsed
+            except yaml.YAMLError as exc:
+                logger.error(f"Failed to parse existing proposals: {exc}")
+
+    existing_ids = {item.get("rule_id") for item in existing_data if isinstance(item, dict)}
+    added_count = 0
+
+    for rule in new_rules:
+        if rule.rule_id in existing_ids:
+            logger.info(f"Rule '{rule.rule_id}' already present in pending proposals. Skipping duplicate.")
+            continue
+
+        existing_data.append(rule.model_dump())
+        existing_ids.add(rule.rule_id)
+        added_count += 1
+
+    if added_count > 0:
+        with open(PENDING_PROPOSALS_PATH, "w", encoding="utf-8") as f:
+            yaml.safe_dump(existing_data, f, sort_keys=False, default_flow_style=False)
+        logger.info(f"Staged {added_count} new rule proposal(s) in {PENDING_PROPOSALS_PATH}.")
+
+    return added_count
 
 
 def distill_statutory_text(raw_text: str, jurisdiction: Literal["UK", "EU"]) -> List[DistilledRule]:
@@ -130,55 +140,34 @@ def distill_statutory_text(raw_text: str, jurisdiction: Literal["UK", "EU"]) -> 
 
 
 def ingest_statute_file(file_path: Path, jurisdiction: Literal["UK", "EU"]) -> int:
-    """Parses a cached statute file, validates groundedness, and indexes verified rules in Qdrant."""
+    """Parses a cached statute file, validates groundedness, and stages verified rules to pending_proposals."""
     if not file_path.exists():
         logger.warning(f"File not found: {file_path}")
         return 0
 
     raw_text = file_path.read_text(encoding="utf-8")
     logger.info(f"Distilling statutory rules from {file_path.name}...")
-    
+
     candidate_rules = distill_statutory_text(raw_text, jurisdiction)
-    logger.info(f"Extracted {len(candidate_rules)} candidate rules. Verifying groundedness (threshold={GROUNDEDNESS_THRESHOLD})...")
+    logger.info(
+        f"Extracted {len(candidate_rules)} candidate rules. Verifying groundedness (threshold={GROUNDEDNESS_THRESHOLD})..."
+    )
 
-    qdrant = get_qdrant_client()
-    verified_count = 0
-    points = []
-
+    verified_rules: List[DistilledRule] = []
     for rule in candidate_rules:
         is_grounded = verify_groundedness(rule, raw_text)
         if not is_grounded:
             logger.warning(f"REJECTED hallucinated/ungrounded rule: {rule.rule_id}")
             continue
+        verified_rules.append(rule)
 
-        # Embed constraint + verbatim quote for semantic retrieval
-        embedding_payload = f"{rule.statute_reference} | {rule.enforceable_constraint} | {rule.verbatim_quote}"
-        vector = get_embedding(embedding_payload)
-
-        # Deterministic point ID based on rule_id string hash
-        point_id = abs(hash(rule.rule_id)) % (10 ** 12)
-
-        points.append(
-            models.PointStruct(
-                id=point_id,
-                vector=vector,
-                payload=rule.model_dump(),
-            )
-        )
-        verified_count += 1
-
-    if points:
-        qdrant.upsert(collection_name=COLLECTION_NAME, points=points)
-        logger.info(f"Successfully upserted {len(points)} grounded rules into Qdrant collection '{COLLECTION_NAME}'.")
-
-    return verified_count
+    if verified_rules:
+        return stage_pending_proposals(verified_rules)
+    return 0
 
 
 def run_curator_pipeline() -> None:
     """Main discovery and ingestion runner across cached statutes."""
-    init_qdrant_collection()
-
-    # Ingest whatever files currently sit in the statute cache
     cache_path = Path(CACHE_DIR)
     if not cache_path.exists():
         logger.error(f"Statute cache directory does not exist at {cache_path}. Run discovery first.")
@@ -189,12 +178,12 @@ def run_curator_pipeline() -> None:
         logger.warning("No .txt files found in statute cache to ingest.")
         return
 
-    total_ingested = 0
+    total_staged = 0
     for txt in txt_files:
         jurisdiction = "UK" if "uk" in txt.name.lower() else "EU"
-        total_ingested += ingest_statute_file(txt, jurisdiction=jurisdiction)
+        total_staged += ingest_statute_file(txt, jurisdiction=jurisdiction)
 
-    logger.info(f"Curator pipeline complete. Total active rules indexed: {total_ingested}")
+    logger.info(f"Curator pipeline complete. Total proposals staged for human review: {total_staged}")
 
 
 if __name__ == "__main__":
