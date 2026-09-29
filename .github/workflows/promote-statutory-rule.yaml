@@ -1,0 +1,45 @@
+# .github/workflows/promote-statutory-rule.yml
+name: Promote Statutory Rule (HITL Sign-off)
+
+on:
+  workflow_dispatch:
+    inputs:
+      rule_id:
+        description: 'Exact Rule ID from memory/pending_proposals.yaml'
+        required: true
+        type: string
+      approver_notes:
+        description: 'Legal / Compliance approval reference (e.g., TICKET-104 / Counsel sign-off)'
+        required: true
+        type: string
+
+jobs:
+  promote-rule:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Dependencies
+        run: pip install -r requirements.txt
+
+      - name: Execute Human-Gated Promotion
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          echo "Promoting rule: ${{ inputs.rule_id }}"
+          echo "Sign-off reference: ${{ inputs.approver_notes }}"
+          python -m src.tools.promote_rule --rule-id "${{ inputs.rule_id }}"
+
+      - name: Commit & Push Updated Memory to Main
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add configs/ memory/
+          git commit -m "chore(compliance): promote rule ${{ inputs.rule_id }} [Sign-off: ${{ inputs.approver_notes }}]"
+          git push origin main

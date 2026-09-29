@@ -1,6 +1,7 @@
 """auditor.py: Hybrid compliance auditor combining AST analysis, Qdrant vector retrieval, and fast LLM evaluation."""
 
 import argparse
+import asyncio
 import ast
 import json
 import logging
@@ -379,6 +380,20 @@ def main():
                 print(f"❌ [BLOCKED] {f}: {report.blocking_violations} blocking violation(s)")
                 for v in report.violations:
                     print(f"    - Line {v.line_number}: [{v.rule_id}] {v.summary}")
+
+                    # Dispatch alert to Telegram for CI / code violations
+                    if v.severity == "BLOCKING":
+                        try:
+                            asyncio.run(
+                                send_telegram_alert(
+                                    title=f"Blocking Violation in {f.name}:{v.line_number}",
+                                    message=f"*Statute:* {v.statute_reference}\n*Issue:* {v.summary}\n*Fix:* {v.suggested_fix}",
+                                    rule_id=v.rule_id,
+                                )
+                            )
+                        except Exception as alert_err:
+                            logger.warning(f"Telegram dispatch failed: {alert_err}")
+
             elif report.total_violations > 0:
                 print(f"⚠️  [WARNING] {f}: {report.total_violations} warning(s)")
             else:

@@ -10,7 +10,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 load_dotenv(PROJECT_ROOT / ".env")
 
 CONFIGS_DIR = PROJECT_ROOT / "configs"
-REGISTRY_PATH = CONFIGS_DIR / "regulatory_registry.yml"
+REGISTRY_PATH = CONFIGS_DIR / "regulatory_registry.yaml"
 
 MEMORY_DIR = PROJECT_ROOT / "memory"
 CACHE_DIR = MEMORY_DIR / "statutory_cache"

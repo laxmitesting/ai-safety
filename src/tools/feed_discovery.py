@@ -94,7 +94,7 @@ async def check_statutory_source(source_key: str, source_cfg: Dict[str, Any]) ->
 
 
 async def run_discovery_cycle() -> None:
-    """Executes a full discovery cycle across all entries in regulatory_registry.yml."""
+    """Executes a full discovery cycle across all entries in regulatory_registry.yaml."""
     registry = load_regulatory_registry()
     sources = registry.get("sources", {})
 
@@ -107,16 +107,20 @@ async def run_discovery_cycle() -> None:
 
     for key, cfg in sources.items():
         updates = await check_statutory_source(key, cfg)
-    for update in updates:
-        msg = f"New statutory instrument or amendment detected: **{update['title']}**\n[View Publication]({update['link']})"
-        logger.info(f"Radar Alert [{key}]: {update['title']}")
+        for update in updates:
+            all_alerts.append(update)
+            msg = (
+                f"New statutory instrument or amendment detected: **{update['title']}**\n"
+                f"[View Publication]({update['link']})"
+            )
+            logger.info(f"Radar Alert [{key}]: {update['title']}")
 
-        # Dispatch exclusively to Discord channel
-        await send_discord_alert(
-            title=f"Regulatory Radar Alert: {key.upper()}",
-            message=msg,
-            rule_id=key,
-        )
+            # Dispatch exclusively to Discord channel
+            await send_discord_alert(
+                title=f"Regulatory Radar Alert: {key.upper()}",
+                message=msg,
+                rule_id=key,
+            )
 
     logger.info(f"Discovery radar cycle completed. Detected {len(all_alerts)} relevant items.")
 

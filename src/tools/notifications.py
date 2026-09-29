@@ -1,33 +1,27 @@
-"""notifications.py: Dispatch regulatory alerts and review cards to external endpoints."""
+# src/tools/notifications.py
 
 import logging
 from typing import Optional
 import httpx
-
-from configs.settings import (
-    DISCORD_WEBHOOK_URL,
-    TELEGRAM_BOT_TOKEN,
-    TELEGRAM_CHAT_ID,
-)
+from configs.settings import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, DISCORD_WEBHOOK_URL
 
 logger = logging.getLogger(__name__)
-
 
 async def send_telegram_alert(
     title: str,
     message: str,
     rule_id: Optional[str] = None,
 ) -> bool:
-    """Send a structured regulatory review card to Telegram using centralized settings."""
+    """Send PR code violation alerts to Telegram."""
     if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
-        logger.warning("Telegram notification skipped: Missing TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID in settings.")
+        logger.warning("Telegram notification skipped: Missing credentials.")
         return False
 
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
     text_content = (
-        f"🚨 *AISafetyCompliance Alert*\n\n"
+        f"🚨 *AISafetyCompliance PR Alert*\n\n"
         f"*Event:* {title}\n"
-        f"*(Rule):* `{rule_id or 'N/A'}`\n\n"
+        f"*Rule Violation:* `{rule_id or 'N/A'}`\n\n"
         f"{message}"
     )
 
@@ -42,7 +36,7 @@ async def send_telegram_alert(
         try:
             resp = await client.post(url, json=payload)
             resp.raise_for_status()
-            logger.info("Successfully dispatched Telegram compliance notification.")
+            logger.info("Successfully dispatched Telegram PR alert.")
             return True
         except httpx.HTTPError as exc:
             logger.error(f"Failed to deliver Telegram notification: {exc}")
@@ -60,16 +54,16 @@ async def send_discord_alert(
         return False
 
     payload = {
-        "username": "AISafetyCompliance Radar",
+        "username": "Statutory Radar",
         "embeds": [
             {
-                "title": f"🚨 {title}",
+                "title": f"📜 {title}",
                 "description": message,
-                "color": 3447003,  # Blue/neutral info hex for radar
+                "color": 3447003,
                 "fields": [
                     {
-                        "name": "Statutory Rule",
-                        "value": f"`{rule_id or 'General'}`",
+                        "name": "Statutory Authority",
+                        "value": f"`{rule_id or 'General Legislation'}`",
                         "inline": True,
                     }
                 ],
